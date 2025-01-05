@@ -157,11 +157,11 @@ if st.sidebar.button("Predict"):
             prediction_data = pd.DataFrame({
                 "Metric": ["Total Traffic", "Northbound", "Southbound", "Eastbound", "Westbound"],
                 "Value": [
-                    f"{prediction['total']:.2f}",
-                    f"{prediction['northbound']:.2f}",
-                    f"{prediction['southbound']:.2f}",
-                    f"{prediction['eastbound']:.2f}",
-                    f"{prediction['westbound']:.2f}"
+                    int(round(prediction['total'])),
+                    int(round(prediction['northbound'])),
+                    int(round(prediction['southbound'])),
+                    int(round(prediction['eastbound'])),
+                    int(round(prediction['westbound']))
                 ]
             })
             st.table(prediction_data)
@@ -173,11 +173,11 @@ if st.sidebar.button("Predict"):
                 "Metric": ["Date", "Northbound", "Southbound", "Eastbound", "Westbound", "Total"],
                 "Value": [
                     historical_data["Date"],
-                    f"{historical_data['Northbound']:.2f}",
-                    f"{historical_data['Southbound']:.2f}",
-                    f"{historical_data['Eastbound']:.2f}",
-                    f"{historical_data['Westbound']:.2f}",
-                    f"{historical_data['Total']:.2f}"
+                    int(round(historical_data['Northbound'])),
+                    int(round(historical_data['Southbound'])),
+                    int(round(historical_data['Eastbound'])),
+                    int(round(historical_data['Westbound'])),
+                    int(round(historical_data['Total']))
                 ]
             })
             st.table(historical_table)
