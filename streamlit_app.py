@@ -4,22 +4,20 @@ import joblib
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import MinMaxScaler
 
-# Paths to necessary files
+
+# File paths
 DATASET_PATH = "dataset/filtered_date_traffic_activity_data.parquet"
 FUTURE_FORECAST_PATH = "dataset/future_traffic_forecast.parquet"
 MODEL_PATH = "model/vehicle_traffic_prediction_model.pkl"
 SCALER_PATH = "model/vehicle_traffic_scaler_total.pkl"
 
-# Load the dataset
+
+# Load dataset and models
 @st.cache_data
 def load_dataset():
     df = pd.read_parquet(DATASET_PATH)
     return df
 
-@st.cache_data
-def load_future_forecast():
-    future_traffic = pd.read_parquet(FUTURE_FORECAST_PATH)
-    return future_traffic
 
 @st.cache_resource
 def load_model_and_scaler():
@@ -27,27 +25,46 @@ def load_model_and_scaler():
     scaler = joblib.load(SCALER_PATH)
     return model, scaler
 
-# Prepare historical data for display
-def get_historical_data(df, site, date):
-    # Ensure 'Date' column exists
-    if 'Date' not in df.columns:
-        df['Timestamp'] = pd.to_datetime(df['Timestamp'])
-        df['Date'] = df['Timestamp'].dt.date  # Extract the date part
 
-    # Filter for the given site and date
-    site_data = df[(df["Site"] == site) & (df["Date"] == pd.to_datetime(date).date())]
+@st.cache_data
+def load_future_forecast():
+    future_traffic = pd.read_parquet(FUTURE_FORECAST_PATH)
+    return future_traffic
 
-    if site_data.empty:
+
+# Fetch historical data for the same date and time of day
+def get_latest_historical_data(df, site, date, time_of_day):
+    time_of_day_features = {
+        'Morning': 'TimeOfDay_Morning',
+        'Afternoon': 'TimeOfDay_Afternoon',
+        'Evening': 'TimeOfDay_Evening',
+        'Night': 'TimeOfDay_Night'
+    }
+    df['Timestamp'] = pd.to_datetime(df['Timestamp'])
+    df['Date'] = df['Timestamp'].dt.date
+    df['MonthDay'] = df['Timestamp'].dt.strftime('%m-%d')  # Extract month and day
+
+    # Filter for the same site, date (ignoring year), and time of day
+    historical_data = df[
+        (df['Site'] == site) &
+        (df['MonthDay'] == date.strftime('%m-%d')) &
+        (df[time_of_day_features[time_of_day]] == 1)
+    ]
+
+    latest_date = historical_data['Date'].max()  # Find the latest date (year)
+    if latest_date is None or historical_data.empty:
         return None
 
+    filtered_data = historical_data[historical_data['Date'] == latest_date]
     return {
-        "Schedule Period": str(date),
-        "Northbound": site_data["Northbound"].sum(),
-        "Southbound": site_data["Southbound"].sum(),
-        "Eastbound": site_data["Eastbound"].sum(),
-        "Westbound": site_data["Westbound"].sum(),
-        "Total Historical Traffic": site_data["Total"].sum(),
+        "Date": str(latest_date),
+        "Northbound": filtered_data["Northbound"].sum(),
+        "Southbound": filtered_data["Southbound"].sum(),
+        "Eastbound": filtered_data["Eastbound"].sum(),
+        "Westbound": filtered_data["Westbound"].sum(),
+        "Total": filtered_data["Total"].sum()
     }
+
 
 # Prediction function
 def predict_traffic(model, scaler, future_traffic, site, date, time_of_day):
@@ -102,6 +119,7 @@ def predict_traffic(model, scaler, future_traffic, site, date, time_of_day):
         'westbound': westbound
     }
 
+
 # Streamlit App
 st.title("Vehicle Traffic Prediction")
 
@@ -118,13 +136,13 @@ time_of_day = st.sidebar.selectbox("Select Time of Day", ["Morning", "Afternoon"
 
 if st.sidebar.button("Predict"):
     # Get historical data
-    historical_data = get_historical_data(df, site, date)
+    historical_data = get_latest_historical_data(df, site, date, time_of_day)
 
     # Make prediction
     prediction = predict_traffic(model, scaler, future_traffic, site, date, time_of_day)
 
+    # Display results
     if prediction:
-        # Display prediction results
         st.subheader("Prediction Results")
         prediction_data = pd.DataFrame({
             "Metric": ["Total Traffic", "Northbound", "Southbound", "Eastbound", "Westbound"],
@@ -139,16 +157,16 @@ if st.sidebar.button("Predict"):
         st.table(prediction_data)
 
     if historical_data:
-        # Display historical data
         st.subheader("Latest Historical Data")
         historical_table = pd.DataFrame({
-            "Metric": ["Northbound", "Southbound", "Eastbound", "Westbound", "Total Historical Traffic"],
+            "Metric": ["Date", "Northbound", "Southbound", "Eastbound", "Westbound", "Total"],
             "Value": [
+                historical_data["Date"],
                 f"{historical_data['Northbound']:.2f}",
                 f"{historical_data['Southbound']:.2f}",
                 f"{historical_data['Eastbound']:.2f}",
                 f"{historical_data['Westbound']:.2f}",
-                f"{historical_data['Total Historical Traffic']:.2f}"
+                f"{historical_data['Total']:.2f}"
             ]
         })
         st.table(historical_table)
