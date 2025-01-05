@@ -64,12 +64,12 @@ def get_latest_historical_data(df, site, date, time_of_day):
 
     filtered_data = historical_data[historical_data['Date'] == latest_date]
     return {
-        "Date": str(latest_date),
+        "Total": filtered_data["Total"].sum(),
         "Northbound": filtered_data["Northbound"].sum(),
         "Southbound": filtered_data["Southbound"].sum(),
         "Eastbound": filtered_data["Eastbound"].sum(),
         "Westbound": filtered_data["Westbound"].sum(),
-        "Total": filtered_data["Total"].sum()
+        "Date": str(latest_date)
     }
 
 
@@ -181,7 +181,7 @@ if st.sidebar.button("Predict"):
                     historical_data["Date"]
                 ]
             })
-            st.table(historical_table)
+            #st.table(historical_table)
             st.write(historical_table.style.set_table_styles([{'selector': 'td', 'props': [('white-space', 'nowrap')]}]).hide(axis="index").to_html(), unsafe_allow_html=True)
             
 
