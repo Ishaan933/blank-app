@@ -28,6 +28,8 @@ model = load_model()
 scaler = load_scaler()
 df, future_traffic = load_data()
 
+
+
 # Prediction function
 def predict_traffic(site, date, time_of_day):
     time_of_day_features = {
@@ -105,6 +107,7 @@ def get_historical_data(site, date):
         "Total Historical Traffic": historical_row[['Northbound', 'Southbound', 'Eastbound', 'Westbound']].sum(axis=1).values[0],
     }
 
+
 # Streamlit app
 st.title("Vehicle Traffic Prediction")
 st.sidebar.header("Input Parameters")
@@ -117,6 +120,11 @@ time_of_day = st.sidebar.selectbox("Select Time of Day", ["Morning", "Afternoon"
 if st.sidebar.button("Predict"):
     result = predict_traffic(site, date, time_of_day)
     historical_data = get_historical_data(site, date)
+
+    st.write("Columns in the DataFrame:", historical_data.columns.tolist())
+    st.write("Sample data in the DataFrame:")
+    st.write(historical_data.head())
+
 
     if result and historical_data:
         # Display Prediction Results
