@@ -4,8 +4,8 @@ import joblib
 from sklearn.ensemble import RandomForestRegressor
 
 # Paths to necessary files
-MODEL_PATH = "models/vehicle_traffic_prediction_model.pkl"
-SCALER_PATH = "models/vehicle_traffic_scaler_total.pkl"
+MODEL_PATH = "model/vehicle_traffic_prediction_model.pkl"
+SCALER_PATH = "model/vehicle_traffic_scaler_total.pkl"
 DATASET_PATH = "data/filtered_date_traffic_activity_data.parquet"
 FUTURE_FORECAST_PATH = "data/future_traffic_forecast.parquet"
 
