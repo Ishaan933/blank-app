@@ -1,11 +1,8 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
+import joblib
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.metrics import mean_absolute_error, r2_score
-from prophet import Prophet
-import joblib
 
 # Paths to necessary files
 DATASET_PATH = "dataset/filtered_date_traffic_activity_data.parquet"
@@ -32,13 +29,19 @@ def load_model_and_scaler():
 
 # Prepare historical data for display
 def get_historical_data(df, site, date):
+    # Ensure 'Date' column exists
+    if 'Date' not in df.columns:
+        df['Timestamp'] = pd.to_datetime(df['Timestamp'])
+        df['Date'] = df['Timestamp'].dt.date  # Extract the date part
+
+    # Filter for the given site and date
     site_data = df[(df["Site"] == site) & (df["Date"] == pd.to_datetime(date).date())]
 
     if site_data.empty:
         return None
 
     return {
-        "Schedule Period": f"{site_data['Date'].min()}",
+        "Schedule Period": str(date),
         "Northbound": site_data["Northbound"].sum(),
         "Southbound": site_data["Southbound"].sum(),
         "Eastbound": site_data["Eastbound"].sum(),
@@ -139,9 +142,8 @@ if st.sidebar.button("Predict"):
         # Display historical data
         st.subheader("Latest Historical Data")
         historical_table = pd.DataFrame({
-            "Metric": ["Schedule Period", "Northbound", "Southbound", "Eastbound", "Westbound", "Total Historical Traffic"],
+            "Metric": ["Northbound", "Southbound", "Eastbound", "Westbound", "Total Historical Traffic"],
             "Value": [
-                historical_data["Schedule Period"],
                 f"{historical_data['Northbound']:.2f}",
                 f"{historical_data['Southbound']:.2f}",
                 f"{historical_data['Eastbound']:.2f}",
