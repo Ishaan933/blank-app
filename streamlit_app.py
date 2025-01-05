@@ -164,23 +164,26 @@ if st.sidebar.button("Predict"):
                     int(round(prediction['westbound']))
                 ]
             })
-            st.table(prediction_data)
-
+            #st.table(prediction_data)
+            st.write(prediction_data.style.set_table_styles([{'selector': 'td', 'props': [('white-space', 'nowrap')]}]).hide(axis="index").to_html(), unsafe_allow_html=True)
+            
     if historical_data:
         with col2:
             st.subheader("Latest Historical Data")
             historical_table = pd.DataFrame({
                 "Metric": ["Date", "Northbound", "Southbound", "Eastbound", "Westbound", "Total"],
                 "Value": [
-                    historical_data["Date"],
+                    int(round(historical_data['Total'])),
                     int(round(historical_data['Northbound'])),
                     int(round(historical_data['Southbound'])),
                     int(round(historical_data['Eastbound'])),
                     int(round(historical_data['Westbound'])),
-                    int(round(historical_data['Total']))
+                    historical_data["Date"]
                 ]
             })
             st.table(historical_table)
+            st.write(historical_table.style.set_table_styles([{'selector': 'td', 'props': [('white-space', 'nowrap')]}]).hide(axis="index").to_html(), unsafe_allow_html=True)
+            
 
     if not prediction:
         st.error("No forecasted data available for the selected input.")
