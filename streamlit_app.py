@@ -6,20 +6,26 @@ from sklearn.preprocessing import MinMaxScaler
 
 
 # File paths
-#DATASET_PATH = "filtered_date_traffic_activity_data.parquet"
-#MODEL_PATH = "vehicle_traffic_prediction_model.pkl"
-#SCALER_PATH = "vehicle_traffic_scaler_total.pkl"
-#FUTURE_FORECAST_PATH = "future_traffic_forecast.parquet"
+DATASET_PATH = "filtered_date_traffic_activity_data.parquet"
+MODEL_PATH = "vehicle_traffic_prediction_model.pkl"
+SCALER_PATH = "vehicle_traffic_scaler_total.pkl"
+FUTURE_FORECAST_PATH = "future_traffic_forecast.parquet"
 
-DATASET_PATH = "dataset/filtered_date_traffic_activity_data.parquet"
-FUTURE_FORECAST_PATH = "dataset/future_traffic_forecast.parquet"
-MODEL_PATH = "model/vehicle_traffic_prediction_model.pkl"
-SCALER_PATH = "model/vehicle_traffic_scaler_total.pkl"
 
-# Load dataset and models
+# Load dataset and add necessary time-of-day columns
 @st.cache_data
 def load_dataset():
     df = pd.read_parquet(DATASET_PATH)
+
+    # Ensure Timestamp is datetime and create additional columns
+    df['Timestamp'] = pd.to_datetime(df['Timestamp'])
+    df['Date'] = df['Timestamp'].dt.date
+    df['Hour'] = df['Timestamp'].dt.hour
+    df['TimeOfDay_Morning'] = ((df['Hour'] >= 6) & (df['Hour'] < 12)).astype(int)
+    df['TimeOfDay_Afternoon'] = ((df['Hour'] >= 12) & (df['Hour'] < 18)).astype(int)
+    df['TimeOfDay_Evening'] = ((df['Hour'] >= 18) & (df['Hour'] < 24)).astype(int)
+    df['TimeOfDay_Night'] = (df['Hour'] < 6).astype(int)
+
     return df
 
 
@@ -44,8 +50,6 @@ def get_latest_historical_data(df, site, date, time_of_day):
         'Evening': 'TimeOfDay_Evening',
         'Night': 'TimeOfDay_Night'
     }
-    df['Timestamp'] = pd.to_datetime(df['Timestamp'])
-    df['Date'] = df['Timestamp'].dt.date
     df['MonthDay'] = df['Timestamp'].dt.strftime('%m-%d')  # Extract month and day
 
     # Filter for the same site, date (ignoring year), and time of day
