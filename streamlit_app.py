@@ -95,12 +95,28 @@ time_of_day = st.sidebar.selectbox("Select Time of Day", ["Morning", "Afternoon"
 if st.sidebar.button("Predict"):
     result = predict_traffic(site, date, time_of_day)
     if result:
-        st.subheader("Prediction Results")
-        st.write(f"**Total Traffic**: {result['total']:.2f}")
-        st.write(f"**Northbound**: {result['northbound']:.2f}")
-        st.write(f"**Southbound**: {result['southbound']:.2f}")
-        st.write(f"**Eastbound**: {result['eastbound']:.2f}")
-        st.write(f"**Westbound**: {result['westbound']:.2f}")
+        # Structured layout for results
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.subheader("Prediction Results")
+            prediction_data = pd.DataFrame({
+                "Metric": ["Total Traffic", "Northbound", "Southbound", "Eastbound", "Westbound"],
+                "Value": [
+                    f"{result['total']:.2f}",
+                    f"{result['northbound']:.2f}",
+                    f"{result['southbound']:.2f}",
+                    f"{result['eastbound']:.2f}",
+                    f"{result['westbound']:.2f}"
+                ]
+            })
+            st.table(prediction_data)
+
+        with col2:
+            st.subheader("Input Details")
+            st.write(f"**Site**: {site}")
+            st.write(f"**Date**: {date}")
+            st.write(f"**Time of Day**: {time_of_day}")
+
     else:
         st.error("No forecasted data available for the selected input.")
-
