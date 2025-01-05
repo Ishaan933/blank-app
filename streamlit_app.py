@@ -1,37 +1,53 @@
 import streamlit as st
 import pandas as pd
-import joblib
+import numpy as np
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.metrics import mean_absolute_error, r2_score
+from prophet import Prophet
+import joblib
 
 # Paths to necessary files
-MODEL_PATH = "model/vehicle_traffic_prediction_model.pkl"
-SCALER_PATH = "model/vehicle_traffic_scaler_total.pkl"
-DATASET_PATH = "dataset/filtered_date_traffic_activity_data.parquet"
-FUTURE_FORECAST_PATH = "dataset/future_traffic_forecast.parquet"
+DATASET_PATH = "filtered_date_traffic_activity_data.parquet"
+FUTURE_FORECAST_PATH = "future_traffic_forecast.parquet"
+MODEL_PATH = "vehicle_traffic_prediction_model.pkl"
+SCALER_PATH = "vehicle_traffic_scaler_total.pkl"
 
-# Load model, scaler, and datasets
-@st.cache_resource
-def load_model():
-    return joblib.load(MODEL_PATH)
-
-@st.cache_resource
-def load_scaler():
-    return joblib.load(SCALER_PATH)
+# Load the dataset
+@st.cache_data
+def load_dataset():
+    df = pd.read_parquet(DATASET_PATH)
+    return df
 
 @st.cache_data
-def load_data():
-    df = pd.read_parquet(DATASET_PATH)
+def load_future_forecast():
     future_traffic = pd.read_parquet(FUTURE_FORECAST_PATH)
-    return df, future_traffic
+    return future_traffic
 
-model = load_model()
-scaler = load_scaler()
-df, future_traffic = load_data()
+@st.cache_resource
+def load_model_and_scaler():
+    model = joblib.load(MODEL_PATH)
+    scaler = joblib.load(SCALER_PATH)
+    return model, scaler
 
+# Prepare historical data for display
+def get_historical_data(df, site, date):
+    site_data = df[(df["Site"] == site) & (df["Date"] == pd.to_datetime(date).date())]
 
+    if site_data.empty:
+        return None
+
+    return {
+        "Schedule Period": f"{site_data['Date'].min()}",
+        "Northbound": site_data["Northbound"].sum(),
+        "Southbound": site_data["Southbound"].sum(),
+        "Eastbound": site_data["Eastbound"].sum(),
+        "Westbound": site_data["Westbound"].sum(),
+        "Total Historical Traffic": site_data["Total"].sum(),
+    }
 
 # Prediction function
-def predict_traffic(site, date, time_of_day):
+def predict_traffic(model, scaler, future_traffic, site, date, time_of_day):
     time_of_day_features = {
         'Morning': [1, 0, 0, 0],
         'Afternoon': [0, 1, 0, 0],
@@ -41,6 +57,7 @@ def predict_traffic(site, date, time_of_day):
 
     future_traffic['ds'] = pd.to_datetime(future_traffic['ds']).dt.date
     site = site.strip().title()
+
     future_row = future_traffic[(future_traffic['Site'] == site) & (future_traffic['ds'] == date)]
 
     if future_row.empty:
@@ -62,13 +79,10 @@ def predict_traffic(site, date, time_of_day):
         'TimeOfDay_Afternoon': [time_of_day_values[1]],
         'TimeOfDay_Evening': [time_of_day_values[2]],
         'TimeOfDay_Night': [time_of_day_values[3]],
+        **{f'Site_{s}': [int(s == site)] for s in future_traffic['Site'].unique()}
     })
 
-    # Add site-specific columns
-    for s in future_traffic['Site'].unique():
-        future_input[f"Site_{s}"] = int(s == site)
-
-    # Ensure input columns match model training
+    # Ensure input columns match training columns
     for col in model.feature_names_in_:
         if col not in future_input.columns:
             future_input[col] = 0
@@ -85,81 +99,59 @@ def predict_traffic(site, date, time_of_day):
         'westbound': westbound
     }
 
-# Fetch historical data
-def get_historical_data(site, date):
-    historical_data = df[df['Site'] == site]
-
-    # Group by date to aggregate values (assumes 'Date' column exists)
-    grouped_data = historical_data.groupby(['Date', 'Site']).sum().reset_index()
-
-    # Filter for the specific date
-    historical_row = grouped_data[grouped_data['Date'] == pd.to_datetime(date)]
-
-    if historical_row.empty:
-        return None
-
-    return {
-        "Schedule Period": f"{historical_row['Date'].min().date()} - {historical_row['Date'].max().date()}",
-        "Northbound": historical_row['Northbound'].values[0],
-        "Southbound": historical_row['Southbound'].values[0],
-        "Eastbound": historical_row['Eastbound'].values[0],
-        "Westbound": historical_row['Westbound'].values[0],
-        "Total Historical Traffic": historical_row[['Northbound', 'Southbound', 'Eastbound', 'Westbound']].sum(axis=1).values[0],
-    }
-
-
-# Streamlit app
+# Streamlit App
 st.title("Vehicle Traffic Prediction")
-st.sidebar.header("Input Parameters")
+
+# Load data and models
+df = load_dataset()
+future_traffic = load_future_forecast()
+model, scaler = load_model_and_scaler()
 
 # Sidebar inputs
-site = st.sidebar.selectbox("Select Site", df['Site'].unique())
+st.sidebar.header("Input Parameters")
+site = st.sidebar.selectbox("Select Site", df["Site"].unique())
 date = st.sidebar.date_input("Select Date")
 time_of_day = st.sidebar.selectbox("Select Time of Day", ["Morning", "Afternoon", "Evening", "Night"])
 
 if st.sidebar.button("Predict"):
-    result = predict_traffic(site, date, time_of_day)
-    historical_data = get_historical_data(site, date)
+    # Get historical data
+    historical_data = get_historical_data(df, site, date)
 
-    st.write("Columns in the DataFrame:", historical_data.columns.tolist())
-    st.write("Sample data in the DataFrame:")
-    st.write(historical_data.head())
+    # Make prediction
+    prediction = predict_traffic(model, scaler, future_traffic, site, date, time_of_day)
 
+    if prediction:
+        # Display prediction results
+        st.subheader("Prediction Results")
+        prediction_data = pd.DataFrame({
+            "Metric": ["Total Traffic", "Northbound", "Southbound", "Eastbound", "Westbound"],
+            "Value": [
+                f"{prediction['total']:.2f}",
+                f"{prediction['northbound']:.2f}",
+                f"{prediction['southbound']:.2f}",
+                f"{prediction['eastbound']:.2f}",
+                f"{prediction['westbound']:.2f}"
+            ]
+        })
+        st.table(prediction_data)
 
-    if result and historical_data:
-        # Display Prediction Results
-        col1, col2 = st.columns(2)
+    if historical_data:
+        # Display historical data
+        st.subheader("Latest Historical Data")
+        historical_table = pd.DataFrame({
+            "Metric": ["Schedule Period", "Northbound", "Southbound", "Eastbound", "Westbound", "Total Historical Traffic"],
+            "Value": [
+                historical_data["Schedule Period"],
+                f"{historical_data['Northbound']:.2f}",
+                f"{historical_data['Southbound']:.2f}",
+                f"{historical_data['Eastbound']:.2f}",
+                f"{historical_data['Westbound']:.2f}",
+                f"{historical_data['Total Historical Traffic']:.2f}"
+            ]
+        })
+        st.table(historical_table)
+    else:
+        st.warning("No historical data available for the selected input.")
 
-        with col1:
-            st.subheader("Prediction Results")
-            prediction_data = pd.DataFrame({
-                "Metric": ["Total Traffic", "Northbound", "Southbound", "Eastbound", "Westbound"],
-                "Value": [
-                    f"{result['total']:.2f}",
-                    f"{result['northbound']:.2f}",
-                    f"{result['southbound']:.2f}",
-                    f"{result['eastbound']:.2f}",
-                    f"{result['westbound']:.2f}"
-                ]
-            })
-            st.table(prediction_data)
-
-        with col2:
-            st.subheader("Latest Historical Data")
-            historical_table = pd.DataFrame({
-                "Metric": ["Schedule Period", "Northbound", "Southbound", "Eastbound", "Westbound", "Total Historical Traffic"],
-                "Value": [
-                    historical_data["Schedule Period"],
-                    f"{historical_data['Northbound']:.2f}",
-                    f"{historical_data['Southbound']:.2f}",
-                    f"{historical_data['Eastbound']:.2f}",
-                    f"{historical_data['Westbound']:.2f}",
-                    f"{historical_data['Total Historical Traffic']:.2f}"
-                ]
-            })
-            st.table(historical_table)
-
-    elif not result:
+    if not prediction:
         st.error("No forecasted data available for the selected input.")
-    elif not historical_data:
-        st.error("No historical data available for the selected input.")
