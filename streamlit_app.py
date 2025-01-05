@@ -171,7 +171,7 @@ if st.sidebar.button("Predict"):
         with col2:
             st.subheader("Latest Historical Data")
             historical_table = pd.DataFrame({
-                "Metric": ["Date", "Northbound", "Southbound", "Eastbound", "Westbound", "Total"],
+                "Metric": [ "Total", "Northbound", "Southbound", "Eastbound", "Westbound", "Date"],
                 "Value": [
                     int(round(historical_data['Total'])),
                     int(round(historical_data['Northbound'])),
