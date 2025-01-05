@@ -83,6 +83,28 @@ def predict_traffic(site, date, time_of_day):
         'westbound': westbound
     }
 
+# Fetch historical data
+def get_historical_data(site, date):
+    historical_data = df[df['Site'] == site]
+
+    # Group by date to aggregate values (assumes 'Date' column exists)
+    grouped_data = historical_data.groupby(['Date', 'Site']).sum().reset_index()
+
+    # Filter for the specific date
+    historical_row = grouped_data[grouped_data['Date'] == pd.to_datetime(date)]
+
+    if historical_row.empty:
+        return None
+
+    return {
+        "Schedule Period": f"{historical_row['Date'].min().date()} - {historical_row['Date'].max().date()}",
+        "Northbound": historical_row['Northbound'].values[0],
+        "Southbound": historical_row['Southbound'].values[0],
+        "Eastbound": historical_row['Eastbound'].values[0],
+        "Westbound": historical_row['Westbound'].values[0],
+        "Total Historical Traffic": historical_row[['Northbound', 'Southbound', 'Eastbound', 'Westbound']].sum(axis=1).values[0],
+    }
+
 # Streamlit app
 st.title("Vehicle Traffic Prediction")
 st.sidebar.header("Input Parameters")
@@ -94,8 +116,10 @@ time_of_day = st.sidebar.selectbox("Select Time of Day", ["Morning", "Afternoon"
 
 if st.sidebar.button("Predict"):
     result = predict_traffic(site, date, time_of_day)
-    if result:
-        # Structured layout for results
+    historical_data = get_historical_data(site, date)
+
+    if result and historical_data:
+        # Display Prediction Results
         col1, col2 = st.columns(2)
 
         with col1:
@@ -113,10 +137,21 @@ if st.sidebar.button("Predict"):
             st.table(prediction_data)
 
         with col2:
-            st.subheader("Input Details")
-            st.write(f"**Site**: {site}")
-            st.write(f"**Date**: {date}")
-            st.write(f"**Time of Day**: {time_of_day}")
+            st.subheader("Latest Historical Data")
+            historical_table = pd.DataFrame({
+                "Metric": ["Schedule Period", "Northbound", "Southbound", "Eastbound", "Westbound", "Total Historical Traffic"],
+                "Value": [
+                    historical_data["Schedule Period"],
+                    f"{historical_data['Northbound']:.2f}",
+                    f"{historical_data['Southbound']:.2f}",
+                    f"{historical_data['Eastbound']:.2f}",
+                    f"{historical_data['Westbound']:.2f}",
+                    f"{historical_data['Total Historical Traffic']:.2f}"
+                ]
+            })
+            st.table(historical_table)
 
-    else:
+    elif not result:
         st.error("No forecasted data available for the selected input.")
+    elif not historical_data:
+        st.error("No historical data available for the selected input.")
