@@ -128,7 +128,7 @@ def predict_traffic(model, scaler, future_traffic, site, date, time_of_day):
 
 
 # Streamlit App
-st.title("Vehicle Traffic Prediction")
+#st.title("Vehicle Traffic Prediction")
 
 # Load data and models
 df = load_dataset()
@@ -136,7 +136,7 @@ future_traffic = load_future_forecast()
 model, scaler = load_model_and_scaler()
 
 # Sidebar inputs
-st.sidebar.header("Prediction Results")
+st.sidebar.header("Vehicle Traffic Prediction")
 site = st.sidebar.selectbox("Select Site", df["Site"].unique())
 date = st.sidebar.date_input("Select Date")
 time_of_day = st.sidebar.selectbox("Select Time of Day", ["Morning", "Afternoon", "Evening", "Night"])
@@ -153,7 +153,7 @@ if st.sidebar.button("Predict"):
 
     if prediction:
         with col1:
-            #st.subheader("Prediction Results")
+            st.subheader("Prediction Results")
             prediction_data = pd.DataFrame({
                 "Metric": ["Total Traffic", "Northbound", "Southbound", "Eastbound", "Westbound"],
                 "Value": [
