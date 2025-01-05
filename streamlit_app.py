@@ -9,9 +9,9 @@ from sklearn.preprocessing import MinMaxScaler
 DATASET_PATH = "dataset/filtered_date_traffic_activity_data.parquet"
 FUTURE_FORECAST_PATH = "dataset/future_traffic_forecast.parquet"
 MODEL_PATH = "model/vehicle_traffic_prediction_model.pkl"
-SCALER_PATH = "model/vehicle_traffic_scaler_total.pkl"
+SCALER_PATH = "model/vehicle_traffic_scaler_total.pkl" 
 
-# Load dataset and add necessary time-of-day columns
+# Load dataset and preprocess
 @st.cache_data
 def load_dataset():
     df = pd.read_parquet(DATASET_PATH)
