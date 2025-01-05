@@ -8,10 +8,10 @@ from prophet import Prophet
 import joblib
 
 # Paths to necessary files
-DATASET_PATH = "filtered_date_traffic_activity_data.parquet"
-FUTURE_FORECAST_PATH = "future_traffic_forecast.parquet"
-MODEL_PATH = "vehicle_traffic_prediction_model.pkl"
-SCALER_PATH = "vehicle_traffic_scaler_total.pkl"
+DATASET_PATH = "dataset/filtered_date_traffic_activity_data.parquet"
+FUTURE_FORECAST_PATH = "dataset/future_traffic_forecast.parquet"
+MODEL_PATH = "model/vehicle_traffic_prediction_model.pkl"
+SCALER_PATH = "model/vehicle_traffic_scaler_total.pkl"
 
 # Load the dataset
 @st.cache_data
