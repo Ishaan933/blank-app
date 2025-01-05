@@ -148,37 +148,41 @@ if st.sidebar.button("Predict"):
     # Make prediction
     prediction = predict_traffic(model, scaler, future_traffic, site, date, time_of_day)
 
-    # Display results
+    # Use columns for side-by-side display
+    col1, col2 = st.columns(2)
+
     if prediction:
-        st.subheader("Prediction Results")
-        prediction_data = pd.DataFrame({
-            "Metric": ["Total Traffic", "Northbound", "Southbound", "Eastbound", "Westbound"],
-            "Value": [
-                f"{prediction['total']:.2f}",
-                f"{prediction['northbound']:.2f}",
-                f"{prediction['southbound']:.2f}",
-                f"{prediction['eastbound']:.2f}",
-                f"{prediction['westbound']:.2f}"
-            ]
-        })
-        st.table(prediction_data)
+        with col1:
+            st.subheader("Prediction Results")
+            prediction_data = pd.DataFrame({
+                "Metric": ["Total Traffic", "Northbound", "Southbound", "Eastbound", "Westbound"],
+                "Value": [
+                    f"{prediction['total']:.2f}",
+                    f"{prediction['northbound']:.2f}",
+                    f"{prediction['southbound']:.2f}",
+                    f"{prediction['eastbound']:.2f}",
+                    f"{prediction['westbound']:.2f}"
+                ]
+            })
+            st.table(prediction_data)
 
     if historical_data:
-        st.subheader("Latest Historical Data")
-        historical_table = pd.DataFrame({
-            "Metric": ["Date", "Northbound", "Southbound", "Eastbound", "Westbound", "Total"],
-            "Value": [
-                historical_data["Date"],
-                f"{historical_data['Northbound']:.2f}",
-                f"{historical_data['Southbound']:.2f}",
-                f"{historical_data['Eastbound']:.2f}",
-                f"{historical_data['Westbound']:.2f}",
-                f"{historical_data['Total']:.2f}"
-            ]
-        })
-        st.table(historical_table)
-    else:
-        st.warning("No historical data available for the selected input.")
+        with col2:
+            st.subheader("Latest Historical Data")
+            historical_table = pd.DataFrame({
+                "Metric": ["Date", "Northbound", "Southbound", "Eastbound", "Westbound", "Total"],
+                "Value": [
+                    historical_data["Date"],
+                    f"{historical_data['Northbound']:.2f}",
+                    f"{historical_data['Southbound']:.2f}",
+                    f"{historical_data['Eastbound']:.2f}",
+                    f"{historical_data['Westbound']:.2f}",
+                    f"{historical_data['Total']:.2f}"
+                ]
+            })
+            st.table(historical_table)
 
     if not prediction:
         st.error("No forecasted data available for the selected input.")
+    if not historical_data:
+        st.warning("No historical data available for the selected input.")
